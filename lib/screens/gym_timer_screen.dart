@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart'; // Uvoz paketa za audio
+import 'package:shared_preferences/shared_preferences.dart'; // Uvoz za proveru podešavanja
 
 class GymTimerScreen extends StatefulWidget {
   const GymTimerScreen({super.key});
@@ -10,10 +12,13 @@ class GymTimerScreen extends StatefulWidget {
 }
 
 class _GymTimerScreenState extends State<GymTimerScreen> {
-  Duration _duration = const Duration(minutes: 3);
-  Duration _initialDuration = const Duration(minutes: 3); 
+  Duration _duration = const Duration(minutes: 0);
+  Duration _initialDuration = const Duration(minutes: 0); 
   Timer? _countdownTimer;
   bool _isRunning = false;
+
+  // Instanca audio plejera za pištanje alarma
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   void _startTimer() {
     if (_isRunning || _duration.inSeconds == 0) return;
@@ -42,8 +47,23 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
   void _resetTimer() {
     _stopTimer();
     setState(() {
-      _duration = Duration.zero;
+      _duration = _initialDuration; // Vraćamo na inicijalno izabrano vreme umesto na nulu
     });
+  }
+
+  // Funkcija koja proverava SharedPreferences i pušta zvuk ako je dozvoljeno
+  Future<void> _pustiZvukAlarma() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool isNotificationEnabled = prefs.getBool('timer_notifications') ?? true;
+
+    if (isNotificationEnabled) {
+      try {
+        // Pušta fajl koji se nalazi u assets/audio/alarm_beep.mp3
+        await _audioPlayer.play(AssetSource('audio/alarm_beep.mp3'));
+      } catch (e) {
+        debugPrint("Greška pri puštanju zvuka: $e");
+      }
+    }
   }
 
   void _timerFinished() {
@@ -52,11 +72,15 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
       _isRunning = false;
       _duration = Duration.zero;
     });
+
+    // Pokrećemo zvuk alarma čim tajmer stigne do nule
+    _pustiZvukAlarma();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor, // Prilagođava se temi
+        backgroundColor: Theme.of(context).cardColor,
         title: Row(
           children: [
             Icon(Icons.alarm_on, color: Theme.of(context).colorScheme.primary),
@@ -97,17 +121,17 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _audioPlayer.dispose(); // Gasimo resurs audio plejera kada se ekran uništi
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Uzimamo trenutne boje iz teme aplikacije
     final theme = Theme.of(context);
     final primarnaZelena = theme.colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Bela u svetloj / Crna u tamnoj
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text("Gym Timer", style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.titleLarge?.color)),
         backgroundColor: theme.appBarTheme.backgroundColor,
@@ -116,12 +140,11 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // DINEČKI BOKS ZA KONTRAST (Svetlo siv / Tamno siv)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 30),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.cardColor, // Prilagođava se automatski
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(20),
               ),
               height: 220,
@@ -132,7 +155,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
                         style: TextStyle(
                           fontSize: 76,
                           fontWeight: FontWeight.bold,
-                          color: primarnaZelena, // Uvek zelena
+                          color: primarnaZelena,
                           fontFamily: 'monospace', 
                         ),
                       ),
@@ -142,7 +165,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
                         data: CupertinoThemeData(
                           textTheme: CupertinoTextThemeData(
                             pickerTextStyle: TextStyle(
-                              color: primarnaZelena, // Zelene brojke i dok se vrti točkić
+                              color: primarnaZelena,
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
                             ),
@@ -168,7 +191,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
                 ElevatedButton(
                   onPressed: _duration.inSeconds == 0 ? null : (_isRunning ? _stopTimer : _startTimer),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRunning ? Colors.red : primarnaZelena, // Crvena za pauzu, zelena za start
+                    backgroundColor: _isRunning ? Colors.red : primarnaZelena,
                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

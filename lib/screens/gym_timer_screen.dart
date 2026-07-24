@@ -16,6 +16,9 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
   Timer? _countdownTimer;
   bool _isRunning = false;
 
+  // Ključ koji omogućava ponovno iscrtavanje pikera na 00:00
+  Key _pickerKey = UniqueKey();
+
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   void _startTimer() {
@@ -42,11 +45,12 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
     });
   }
 
-  // REŠEN RESET: Vraća vreme tačno na 00:00
+  // REŠEN RESET: Vraća vreme na 00:00 i osvežava piker
   void _resetTimer() {
     _stopTimer();
     setState(() {
       _duration = Duration.zero;
+      _pickerKey = UniqueKey(); // Menja ključ i time vraća točkiće na 00:00
     });
   }
 
@@ -69,6 +73,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
     setState(() {
       _isRunning = false;
       _duration = Duration.zero;
+      _pickerKey = UniqueKey();
     });
 
     _pustiZvukAlarma();
@@ -169,6 +174,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
                           ),
                         ),
                         child: CupertinoTimerPicker(
+                          key: _pickerKey, // Prosleđen novi key za resetovanje
                           mode: CupertinoTimerPickerMode.ms,
                           initialTimerDuration: _duration,
                           onTimerDurationChanged: (newDuration) {

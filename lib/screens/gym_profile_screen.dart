@@ -17,8 +17,8 @@ class GymProfileScreen extends StatefulWidget {
 
 class _GymProfileScreenState extends State<GymProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
-  
-  bool _timerNotifications = true;
+
+  bool _notificationsEnabled = true;
   String _savedName = "";
 
   @override
@@ -33,7 +33,7 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
     setState(() {
       _savedName = prefs.getString('user_name') ?? "";
       _nameController.text = _savedName;
-      _timerNotifications = prefs.getBool('timer_notifications') ?? true;
+      _notificationsEnabled = prefs.getBool('timer_notifications') ?? true;
     });
   }
 
@@ -41,7 +41,8 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
   Future<void> _saveProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', _nameController.text.trim());
-    await prefs.setBool('timer_notifications', _timerNotifications);
+    await prefs.setBool('timer_notifications', _notificationsEnabled);
+    await prefs.setBool('calendar_notifications', _notificationsEnabled);
 
     setState(() {
       _savedName = _nameController.text.trim();
@@ -51,10 +52,10 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'Profil uspešno ažuriran!', 
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+            'Profil uspešno ažuriran!',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: Theme.of(context).colorScheme.primary, // Prati tvoju zelenu boju
+          backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -73,7 +74,7 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
     final primarnaZelena = theme.colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Automatski bela ili crna pozadina
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -81,14 +82,14 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 50),
-              
+
               // GORNJI DEO: Avatar i Ime korisnika
               Center(
                 child: Column(
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: theme.cardColor, // Prilagođava se svetloj/tamnoj temi
+                      backgroundColor: theme.cardColor,
                       child: Icon(
                         Icons.person,
                         size: 60,
@@ -98,7 +99,11 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _savedName.trim().isEmpty ? "Gost Korisnik" : _savedName,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.textTheme.titleLarge?.color),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.titleLarge?.color,
+                      ),
                     ),
                     const Text("Član Fit Planet-a", style: TextStyle(color: Colors.grey, fontSize: 14)),
                   ],
@@ -150,19 +155,19 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
                       activeColor: primarnaZelena,
                       value: widget.isDarkMode,
                       onChanged: (bool value) {
-                        widget.onThemeChanged(value); // Menja temu kroz main.dart u hodu
+                        widget.onThemeChanged(value);
                       },
                     ),
                     Divider(color: theme.brightness == Brightness.light ? Colors.grey.shade300 : Colors.grey.shade800, height: 1),
                     SwitchListTile(
-                      title: Text("Notifikacije Tajmera", style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
-                      subtitle: const Text("Obavesti me kada tajmer istekne", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      title: Text("Notifikacije i Zvuci", style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
+                      subtitle: const Text("Zvuci tajmera i kalendarski podsetnici", style: TextStyle(color: Colors.grey, fontSize: 12)),
                       secondary: Icon(Icons.notifications_active, color: primarnaZelena),
                       activeColor: primarnaZelena,
-                      value: _timerNotifications,
+                      value: _notificationsEnabled,
                       onChanged: (bool value) {
                         setState(() {
-                          _timerNotifications = value;
+                          _notificationsEnabled = value;
                         });
                       },
                     ),
@@ -171,7 +176,7 @@ class _GymProfileScreenState extends State<GymProfileScreen> {
               ),
 
               const SizedBox(height: 35),
-              
+
               // DUGME ZA ČUVANJE
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(

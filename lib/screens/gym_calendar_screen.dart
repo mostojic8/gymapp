@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GymCalendarScreen extends StatefulWidget {
   const GymCalendarScreen({super.key});
@@ -9,6 +10,7 @@ class GymCalendarScreen extends StatefulWidget {
 
 class _GymCalendarScreenState extends State<GymCalendarScreen> {
   DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 09, minute: 00);
   final Map<String, List<String>> _reminders = {};
   final TextEditingController _reminderController = TextEditingController();
 
@@ -16,51 +18,111 @@ class _GymCalendarScreenState extends State<GymCalendarScreen> {
     return "${date.day}.${date.month}.${date.year}.";
   }
 
-  void _addReminder() {
-    if (_reminderController.text.trim().isEmpty) return;
+  Future<void> _addReminder() async {
+    final text = _reminderController.text.trim();
+    if (text.isEmpty) return;
+
+    // Proveravamo da li su notifikacije/zvuk uključeni u opcijama profil ekrana
+    final prefs = await SharedPreferences.getInstance();
+    final bool isNotificationEnabled = prefs.getBool('calendar_notifications') ?? prefs.getBool('notifications_enabled') ?? true;
 
     final String dateKey = _getDateKey(_selectedDate);
+    final String timeFormatted = "${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}";
+    final String fullReminderText = "[$timeFormatted] $text";
+
     setState(() {
       if (_reminders[dateKey] == null) {
         _reminders[dateKey] = [];
       }
-      _reminders[dateKey]!.add(_reminderController.text.trim());
+      _reminders[dateKey]!.add(fullReminderText);
     });
+
     _reminderController.clear();
-    Navigator.pop(context); 
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    // Poruka korisniku u zavisnosti od toga da li je zvuk/notifikacija uključena
+    if (isNotificationEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Podsetnik sačuvan sa notifikacijom u $timeFormatted!'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Podsetnik sačuvan (notifikacije i zvuk su trenutno isključeni u profilu).'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    }
   }
 
   void _showAddReminderDialog() {
     final theme = Theme.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.cardColor, // Prilagođava se svetloj/tamnoj temi
-        title: Text(
-          "Dodaj podsetnik za ${_getDateKey(_selectedDate)}",
-          style: TextStyle(fontSize: 18, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: _reminderController,
-          autofocus: true,
-          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-          decoration: InputDecoration(
-            hintText: "Unesi tekst podsetnika...",
-            hintStyle: const TextStyle(color: Colors.grey),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Otkaži", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary),
-            onPressed: _addReminder,
-            child: const Text("Sačuvaj", style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: theme.cardColor,
+            title: Text(
+              "Dodaj podsetnik za ${_getDateKey(_selectedDate)}",
+              style: TextStyle(fontSize: 18, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _reminderController,
+                  autofocus: true,
+                  style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                  decoration: InputDecoration(
+                    hintText: "Unesi tekst podsetnika (npr. Rođendan)...",
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary)),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Vreme notifikacije: ${_selectedTime.format(context)}",
+                      style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final TimeOfDay? picked = await showTimePicker(
+                          context: context,
+                          initialTime: _selectedTime,
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            _selectedTime = picked;
+                          });
+                        }
+                      },
+                      child: Text("Izaberi", style: TextStyle(color: theme.colorScheme.primary)),
+                    )
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Otkaži", style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary),
+                onPressed: _addReminder,
+                child: const Text("Sačuvaj", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -73,7 +135,7 @@ class _GymCalendarScreenState extends State<GymCalendarScreen> {
     final List<String> activeReminders = _reminders[currentDateKey] ?? [];
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Bela u svetloj / Crna u tamnoj
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -83,7 +145,7 @@ class _GymCalendarScreenState extends State<GymCalendarScreen> {
               flex: 5,
               child: Container(
                 decoration: BoxDecoration(
-                  color: theme.cardColor, // Svetlo siv / Tamno siv blok
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Theme(
@@ -93,12 +155,12 @@ class _GymCalendarScreenState extends State<GymCalendarScreen> {
                         ? const ColorScheme.light(
                             primary: Color(0xFF2ECC71),
                             onPrimary: Colors.white,
-                            onSurface: Colors.black, // Crni brojevi u svetloj temi
+                            onSurface: Colors.black,
                           )
                         : const ColorScheme.dark(
                             primary: Color(0xFF2ECC71),
                             onPrimary: Colors.black,
-                            onSurface: Colors.white, // Beli brojevi u tamnoj temi
+                            onSurface: Colors.white,
                           ),
                   ),
                   child: CalendarDatePicker(
@@ -134,7 +196,7 @@ class _GymCalendarScreenState extends State<GymCalendarScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: theme.cardColor, // Svetlo siv / Tamno siv blok za podsetnike
+                  color: theme.cardColor,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

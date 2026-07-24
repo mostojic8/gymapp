@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart'; // Uvoz paketa za audio
-import 'package:shared_preferences/shared_preferences.dart'; // Uvoz za proveru podešavanja
+import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GymTimerScreen extends StatefulWidget {
   const GymTimerScreen({super.key});
@@ -13,11 +13,9 @@ class GymTimerScreen extends StatefulWidget {
 
 class _GymTimerScreenState extends State<GymTimerScreen> {
   Duration _duration = const Duration(minutes: 0);
-  Duration _initialDuration = const Duration(minutes: 0); 
   Timer? _countdownTimer;
   bool _isRunning = false;
 
-  // Instanca audio plejera za pištanje alarma
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   void _startTimer() {
@@ -44,21 +42,21 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
     });
   }
 
+  // REŠEN RESET: Vraća vreme tačno na 00:00
   void _resetTimer() {
     _stopTimer();
     setState(() {
-      _duration = _initialDuration; // Vraćamo na inicijalno izabrano vreme umesto na nulu
+      _duration = Duration.zero;
     });
   }
 
-  // Funkcija koja proverava SharedPreferences i pušta zvuk ako je dozvoljeno
+  // Funkcija koja proverava podešavanja i pušta zvuk ako su notifikacije/zvuk uključeni
   Future<void> _pustiZvukAlarma() async {
     final prefs = await SharedPreferences.getInstance();
     final bool isNotificationEnabled = prefs.getBool('timer_notifications') ?? true;
 
     if (isNotificationEnabled) {
       try {
-        // Pušta fajl koji se nalazi u assets/audio/alarm_beep.mp3
         await _audioPlayer.play(AssetSource('audio/alarm_beep.mp3'));
       } catch (e) {
         debugPrint("Greška pri puštanju zvuka: $e");
@@ -73,7 +71,6 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
       _duration = Duration.zero;
     });
 
-    // Pokrećemo zvuk alarma čim tajmer stigne do nule
     _pustiZvukAlarma();
 
     showDialog(
@@ -121,7 +118,7 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
-    _audioPlayer.dispose(); // Gasimo resurs audio plejera kada se ekran uništi
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -177,7 +174,6 @@ class _GymTimerScreenState extends State<GymTimerScreen> {
                           onTimerDurationChanged: (newDuration) {
                             setState(() {
                               _duration = newDuration;
-                              _initialDuration = newDuration;
                             });
                           },
                         ),

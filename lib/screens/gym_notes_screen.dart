@@ -10,20 +10,7 @@ class GymNotesScreen extends StatefulWidget {
 }
 
 class _GymNotesScreenState extends State<GymNotesScreen> {
-  final List<GymNote> _notes = [
-    GymNote(
-      id: '1',
-      title: 'Plan ishrane',
-      content: 'Pon: 200g belog mesa, pirinač.\nUto: Junetina i krompir...',
-      dateTime: DateTime.now(),
-    ),
-    GymNote(
-      id: '2',
-      title: 'Maksimumi (PR)',
-      content: 'Bench: 100kg\nDeadlift: 140kg\nSquat: 120kg',
-      dateTime: DateTime.now(),
-    ),
-  ];
+  final List<GymNote> _notes = [];
 
   void _deleteNote(String id) async {
     final theme = Theme.of(context);
